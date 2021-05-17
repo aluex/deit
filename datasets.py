@@ -4,7 +4,9 @@ import os
 import json
 
 from torchvision import datasets, transforms
-from torchvision.datasets.folder import ImageFolder, default_loader
+from torchvision.datasets.folder import default_loader
+# from torchvision.datasets.folder import ImageFolder
+from modified_folder import ImageFolder
 
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import create_transform
@@ -53,7 +55,7 @@ class INatDataset(ImageFolder):
     # __getitem__ and __len__ inherited from ImageFolder
 
 
-def build_dataset(is_train, args):
+def build_dataset(is_train, args, rand_matrix=None):
     transform = build_transform(is_train, args)
 
     if args.data_set == 'CIFAR':
@@ -61,7 +63,8 @@ def build_dataset(is_train, args):
         nb_classes = 100
     elif args.data_set == 'IMNET':
         root = os.path.join(args.data_path, 'train' if is_train else 'val')
-        dataset = datasets.ImageFolder(root, transform=transform)
+        # dataset = ImageFolder(root, transform=transform) # ImageFolder(root, transform=transform, rand_matrix=rand_matrix)
+        dataset = ImageFolder(root, transform=transform, rand_matrix=rand_matrix)
         nb_classes = 1000
     elif args.data_set == 'INAT':
         dataset = INatDataset(args.data_path, train=is_train, year=2018,

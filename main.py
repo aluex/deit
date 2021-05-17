@@ -1,7 +1,7 @@
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
 import argparse
-import datetime
+# import datetime
 import numpy as np
 import time
 import torch
@@ -23,6 +23,8 @@ from losses import DistillationLoss
 from samplers import RASampler
 import models
 import utils
+from datetime import datetime
+from datetime import timedelta
 
 
 def get_args_parser():
@@ -165,10 +167,19 @@ def get_args_parser():
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+
+    # privacy
+    parser.add_argument('--privacy', default=0, type=int, help='privacy technique')
     return parser
 
 
 def main(args):
+
+    now = datetime.now()
+
+    current_time = now.strftime("%m-%d-%H:%M:%S")
+    print("Current Time =", current_time)
+
     utils.init_distributed_mode(args)
 
     print(args)
@@ -186,8 +197,11 @@ def main(args):
 
     cudnn.benchmark = True
 
-    dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
-    dataset_val, _ = build_dataset(is_train=False, args=args)
+    rand_matrix = torch.randn(size=(14 ** 2, 3 * 16**2, 3 * 16**2))
+    torch.save(rand_matrix, 'rand_matrix%s.tsn' % datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+
+    dataset_train, args.nb_classes = build_dataset(is_train=True, args=args, rand_matrix=rand_matrix)
+    dataset_val, _ = build_dataset(is_train=False, args=args, rand_matrix=rand_matrix)
 
     if True:  # args.distributed:
         num_tasks = utils.get_world_size()
@@ -381,7 +395,7 @@ def main(args):
 
         lr_scheduler.step(epoch)
         if args.output_dir:
-            checkpoint_paths = [output_dir / 'checkpoint.pth']
+            checkpoint_paths = [output_dir / ('checkpoint%s.pth' % current_time)]
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({
                     'model': model_without_ddp.state_dict(),
@@ -404,11 +418,11 @@ def main(args):
                      'n_parameters': n_parameters}
 
         if args.output_dir and utils.is_main_process():
-            with (output_dir / "log.txt").open("a") as f:
+            with (output_dir / ("log%s.txt" % current_time)).open("a") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
     total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    total_time_str = str(timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
 
